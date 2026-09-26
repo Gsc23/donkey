@@ -5,8 +5,7 @@ A seeder **orchestration framework** for Go — not a GORM seeding library.
 `core` owns dependency graphs, execution planning, transaction policies and
 run history. It has zero knowledge of GORM, SQLC, `database/sql`, or any
 particular database. Adapters plug into `core`'s ports; your application
-wires them together and embeds the CLI as its own subcommand. See
-[`docs/roadmap.md`](docs/roadmap.md) for the full design rationale.
+wires them together and embeds the CLI as its own subcommand.
 
 ```
 User CLI (embedded in your binary)
