@@ -160,7 +160,12 @@ func main() {
 }
 ```
 
-Full working copy: [`example/cmd/seed/main.go`](example/cmd/seed/main.go).
+Full working copy: [`example/cmd/seed/main.go`](example/cmd/seed/main.go). The
+native-Postgres equivalent —
+[`example/cmd/seed-postgres/main.go`](example/cmd/seed-postgres/main.go),
+wiring `postgres.NewAdapter`/`postgres.NewHistoryStore`/`postgres.NewCmd`
+against [`example/pgseeders`](example/pgseeders) instead — is identical in
+shape, just swapping the adapter.
 
 ```bash
 docker compose up -d                 # postgres:16 on localhost:5432
@@ -169,8 +174,18 @@ go run ./example/cmd/seed plan       # same, numbered
 go run ./example/cmd/seed status     # already-run vs pending — reads history
 go run ./example/cmd/seed run --dry-run   # logs what it would do — no DB write at all
 go run ./example/cmd/seed run        # actually seeds, marks history
+
+# same five commands, native Postgres adapter instead of GORM:
+go run ./example/cmd/seed-postgres list
+go run ./example/cmd/seed-postgres run
 docker compose down
 ```
+
+Both binaries write to the same `public.seeder_history` table (they're
+seeding the same `seeder_dev` database in this example), which is exactly
+why their seeders use distinct IDs (`...-create-admin` vs.
+`...-create-admin-pg`) — nothing stops two adapters sharing one project's
+history, as long as IDs don't collide.
 
 ## Scaffolding a new seeder
 
