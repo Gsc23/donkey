@@ -1,10 +1,6 @@
 package postgres
 
-import (
-	"context"
-
-	"gorm.io/gorm"
-)
+import "context"
 
 const createTableSQL = `
 CREATE TABLE IF NOT EXISTS public.seeder_history (
@@ -12,26 +8,33 @@ CREATE TABLE IF NOT EXISTS public.seeder_history (
     executed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );`
 
-type HistoryStore struct{ db *gorm.DB }
+type HistoryStore struct {
+	db Querier
+}
 
-func NewHistoryStore(db *gorm.DB) *HistoryStore {
+func NewHistoryStore(db Querier) *HistoryStore {
 	return &HistoryStore{db: db}
 }
 
 func (h *HistoryStore) EnsureSchema(ctx context.Context) error {
-	return h.db.WithContext(ctx).Exec(createTableSQL).Error
+	_, err := h.db.ExecContext(ctx, createTableSQL)
+	return err
 }
 
 func (h *HistoryStore) HasRun(ctx context.Context, id string) (bool, error) {
-	var count int64
-	err := h.db.WithContext(ctx).
-		Table("public.seeder_history").
-		Where("seeder_id = ?", id).
-		Count(&count).Error
-	return count > 0, err
+	var count int
+	err := h.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM public.seeder_history WHERE seeder_id = $1`, id,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (h *HistoryStore) MarkRun(ctx context.Context, id string) error {
-	return h.db.WithContext(ctx).
-		Exec(`INSERT INTO public.seeder_history (seeder_id) VALUES (?)`, id).Error
+	_, err := h.db.ExecContext(ctx,
+		`INSERT INTO public.seeder_history (seeder_id) VALUES ($1)`, id,
+	)
+	return err
 }

@@ -6,7 +6,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/Gsc23/donkey/adapter/postgres"
 	"github.com/Gsc23/donkey/core"
 )
 
@@ -30,7 +29,7 @@ func (a *GORMAdapter) Transaction(ctx context.Context, fn func(context.Context, 
 	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		scope := core.Scope{
 			Adapter: &GORMAdapter{db: tx},
-			History: postgres.NewHistoryStore(tx),
+			History: NewHistoryStore(tx),
 		}
 		return fn(ctx, scope)
 	})

@@ -10,12 +10,15 @@ import (
 	"github.com/Gsc23/donkey/core"
 )
 
-func New(runner *core.Runner, seeders []core.Identifiable) *cobra.Command {
+func New(runner *core.Runner, seeders []core.Identifiable, extra ...*cobra.Command) *cobra.Command {
 	root := &cobra.Command{Use: "seed"}
 	root.AddCommand(listCmd(seeders))
 	root.AddCommand(planCmd(seeders))
 	root.AddCommand(runCmd(runner, seeders))
 	root.AddCommand(statusCmd(runner, seeders))
+	for _, cmd := range extra {
+		root.AddCommand(cmd)
+	}
 	return root
 }
 

@@ -11,13 +11,12 @@ import (
 	"gorm.io/gorm"
 
 	gormadapter "github.com/Gsc23/donkey/adapter/gorm"
-	pgstore "github.com/Gsc23/donkey/adapter/postgres"
 	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/core/cli"
 	"github.com/Gsc23/donkey/example/seeders"
 )
 
-func openTestDB(t *testing.T) (*gorm.DB, *pgstore.HistoryStore) {
+func openTestDB(t *testing.T) (*gorm.DB, *gormadapter.HistoryStore) {
 	t.Helper()
 	dsn := "host=localhost user=seeder password=seeder dbname=seeder_dev port=5432 sslmode=disable"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -25,7 +24,7 @@ func openTestDB(t *testing.T) (*gorm.DB, *pgstore.HistoryStore) {
 		t.Fatalf("conectar: %v", err)
 	}
 
-	history := pgstore.NewHistoryStore(db)
+	history := gormadapter.NewHistoryStore(db)
 	if err := history.EnsureSchema(context.Background()); err != nil {
 		t.Fatalf("ensure schema: %v", err)
 	}

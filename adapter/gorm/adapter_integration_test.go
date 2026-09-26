@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm"
 
 	gormadapter "github.com/Gsc23/donkey/adapter/gorm"
-	pgstore "github.com/Gsc23/donkey/adapter/postgres"
 	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/example/seeders"
 )
@@ -22,7 +21,7 @@ func TestIntegration_RunAndSkipOnSecondRun(t *testing.T) {
 		t.Fatalf("conectar: %v", err)
 	}
 
-	history := pgstore.NewHistoryStore(db)
+	history := gormadapter.NewHistoryStore(db)
 	ctx := context.Background()
 	if err := history.EnsureSchema(ctx); err != nil {
 		t.Fatalf("ensure schema: %v", err)

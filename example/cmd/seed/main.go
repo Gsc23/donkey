@@ -14,7 +14,6 @@ import (
 	"gorm.io/gorm"
 
 	gormadapter "github.com/Gsc23/donkey/adapter/gorm"
-	pgstore "github.com/Gsc23/donkey/adapter/postgres"
 	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/core/cli"
 	"github.com/Gsc23/donkey/example/seeders"
@@ -31,7 +30,7 @@ func main() {
 		log.Fatalf("conectar ao banco: %v", err)
 	}
 
-	history := pgstore.NewHistoryStore(db)
+	history := gormadapter.NewHistoryStore(db)
 	if err := history.EnsureSchema(context.Background()); err != nil {
 		log.Fatalf("preparar seeder_history: %v", err)
 	}
@@ -42,7 +41,7 @@ func main() {
 		seeders.CreateAdmin{},
 	}
 
-	cmd := cli.New(runner, toSeed)
+	cmd := cli.New(runner, toSeed, gormadapter.NewCmd())
 	if err := cmd.Execute(); err != nil {
 		var ec core.ExitCoder
 		if errors.As(err, &ec) {
