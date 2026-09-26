@@ -258,3 +258,7 @@ docker compose down
 
 The `integration` build tag keeps DB-touching tests out of the default
 `go test ./...` run.
+
+## License
+
+AGPL3 - see [LICENSE](./LICENSE.md)

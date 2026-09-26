@@ -4,21 +4,59 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  unit:
+  lint-and-vet:
+    name: Lint & vet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
-      - run: go build ./...
-      - run: go vet ./...
-      - run: gofmt -l . | tee /tmp/gofmt.out && test ! -s /tmp/gofmt.out
-      - run: go test ./... -race
+          go-version: "1.23"
+          cache: true
+
+      - name: gofmt check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go vet (integration build tag)
+        run: go vet -tags=integration ./...
+
+  unit:
+    name: Unit tests (no DB)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: go mod verify
+        run: go mod verify
+
+      - name: go mod tidy check
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run unit tests
+        run: go test ./... -v -race
 
   integration:
+    name: Integration tests (real Postgres)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -34,9 +72,31 @@ jobs:
           --health-interval 2s
           --health-timeout 3s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
-      - run: go test ./... -tags=integration -v
+          go-version: "1.23"
+          cache: true
+
+      - name: Run integration tests
+        run: go test ./... -tags=integration -v -race
+        env:
+          DATABASE_URL: "host=localhost user=seeder password=seeder dbname=seeder_dev port=5432 sslmode=disable"
+
+  build-example:
+    name: Build example binary
+    runs-on: ubuntu-latest
+    needs: [unit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: Build
+        run: go build -o /tmp/seed ./example/cmd/seed
