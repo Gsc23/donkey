@@ -12,6 +12,7 @@ import (
 
 func New(runner *core.Runner, seeders []core.Identifiable, extra ...*cobra.Command) *cobra.Command {
 	root := &cobra.Command{Use: "seed"}
+	root.SilenceUsage = true
 	root.AddCommand(listCmd(seeders))
 	root.AddCommand(planCmd(seeders))
 	root.AddCommand(runCmd(runner, seeders))
@@ -72,11 +73,46 @@ func runCmd(runner *core.Runner, seeders []core.Identifiable) *cobra.Command {
 			if dryRun {
 				r = core.New(noop.New(), nil, core.NoTransaction)
 			}
-			return r.Run(cmd.Context(), plan)
+			runErr := r.Run(cmd.Context(), plan)
+
+			if !dryRun {
+				for _, id := range appliedSteps(plan, runErr) {
+					fmt.Fprintf(cmd.OutOrStdout(), "seeded: %s\n", id)
+				}
+			}
+			return runErr
 		},
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "não executa de fato, só mostra o que rodaria")
 	return cmd
+}
+
+func appliedSteps(plan *core.ExecutionPlan, runErr error) []string {
+	cutoff := len(plan.Steps)
+	if runErr != nil {
+		var partial *core.PartialRunError
+		if !errors.As(runErr, &partial) {
+			return nil
+		}
+		cutoff = -1
+		for i, s := range plan.Steps {
+			if s.Seeder.ID() == partial.FailedID {
+				cutoff = i
+				break
+			}
+		}
+	}
+
+	var ids []string
+	for i, s := range plan.Steps {
+		if i >= cutoff {
+			break
+		}
+		if s.Action == core.ActionRun {
+			ids = append(ids, s.Seeder.ID())
+		}
+	}
+	return ids
 }
 
 func statusCmd(runner *core.Runner, seeders []core.Identifiable) *cobra.Command {

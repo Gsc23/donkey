@@ -1,7 +1,3 @@
-// Command seed is a minimal example of how a consumer application embeds
-// the framework: it owns the database connection, wires the GORM adapter
-// and the Postgres HistoryStore, and exposes core/cli as its own "seed"
-// subcommand.
 package main
 
 import (

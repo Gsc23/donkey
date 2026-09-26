@@ -173,7 +173,7 @@ go run ./example/cmd/seed list       # what would run, in order — no DB write
 go run ./example/cmd/seed plan       # same, numbered
 go run ./example/cmd/seed status     # already-run vs pending — reads history
 go run ./example/cmd/seed run --dry-run   # logs what it would do — no DB write at all
-go run ./example/cmd/seed run        # actually seeds, marks history
+go run ./example/cmd/seed run        # actually seeds, prints "seeded: <id>" per step, marks history
 
 # same five commands, native Postgres adapter instead of GORM:
 go run ./example/cmd/seed-postgres list
