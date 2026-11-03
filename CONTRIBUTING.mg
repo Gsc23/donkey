@@ -101,21 +101,24 @@ another — don't take the claim on faith from where a doc comment sits.
 git clone <repo>
 cd donkey
 go mod download
-docker compose up -d   # only needed for integration tests
 ```
 
 ## Running tests
 
 ```bash
 go test ./...                        # unit tests — no Docker required
-go test ./... -tags=integration -v   # + real Postgres, both adapters
+go test ./... -tags=integration -v   # + real Postgres, both adapters (needs Docker)
 ```
 
 Unit tests must never touch Docker or a network connection. If you're
 adding a test that needs a real database, it belongs behind the
 `integration` build tag (`//go:build integration` at the top of the
-file) and should clean up after itself (`t.Cleanup`) so the suite is
-re-runnable without tearing the container down.
+file) and get its connection from `testdb.DSN()`. A new integration
+package also needs `func TestMain(m *testing.M) { os.Exit(testdb.Run(m)) }`,
+which starts that package's own Postgres container. Tests should still
+clean up after themselves (`t.Cleanup`): tests within a package share
+its container, and `DATABASE_URL` can point the suite at a reusable
+database.
 
 ### Verify regression tests actually catch the regression
 
@@ -158,11 +161,14 @@ driver) or, in the future, a new database engine. To add one:
 4. Provide a `HistoryStore` implementation if none of the existing ones
    fit your engine (e.g. table name conventions differ, or the engine
    isn't Postgres).
-5. Optionally, provide a `NewCmd()` (`*cobra.Command`) that scaffolds a
-   new seeder file with your adapter's `Run` signature already filled
-   in. Share the generic mechanics (slug/package validation, `--deps`
-   rendering, overwrite protection) via `internal/scaffold` — write only
-   the template that's specific to your adapter.
+5. Optionally, enable `seed new` for your adapter: write a
+   `seeder.go.tmpl` (a `text/template` receiving `scaffold.Data`) with
+   your adapter's `Run` signature, embed it with `go:embed`, and expose
+   `NewScaffolder() core.Scaffolder` returning `scaffold.New(tpl)`. The
+   generic mechanics (naming, gofmt, overwrite protection) live in
+   `internal/scaffold`, and the rules (slug, `--deps`, ID collision) in
+   `core.Service` — write only the template. Don't import cobra: the
+   command itself lives in `core/cli`.
 6. Add integration tests proving, against the real engine: a seeder runs
    and is skipped on the second run; `PerSeeder` isolates one seeder's
    failure without undoing earlier ones; `All` (if supported) rolls back
@@ -171,10 +177,11 @@ driver) or, in the future, a new database engine. To add one:
    accidentally pull in another adapter's dependency (see risk #7 above).
 
 `core/cli` never imports any adapter package. If your adapter ships a
-`new` command, the consumer wires it in explicitly:
+scaffolder, the consumer wires it in explicitly:
 
 ```go
-cmd := cli.New(runner, seeders, youradapter.NewCmd())
+svc := core.NewService(runner, seeders, core.WithScaffolder(youradapter.NewScaffolder()))
+cmd := cli.New(svc)
 ```
 
 ## Commit and PR expectations
