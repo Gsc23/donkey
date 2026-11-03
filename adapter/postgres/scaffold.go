@@ -1,30 +1,20 @@
 package postgres
 
 import (
-	"github.com/spf13/cobra"
+	"embed"
+	"text/template"
 
+	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/internal/scaffold"
 )
 
-const seederTemplate = `package {{.Package}}
+//go:embed seeder.go.tmpl
+var templates embed.FS
 
-import (
-	"context"
+var seederTemplate = template.Must(template.ParseFS(templates, "seeder.go.tmpl"))
 
-	"github.com/Gsc23/donkey/adapter/postgres"
-)
-
-type {{.TypeName}} struct{}
-
-func ({{.TypeName}}) ID() string             { return "{{.ID}}" }
-func ({{.TypeName}}) Dependencies() []string { return {{.Deps}} }
-
-func ({{.TypeName}}) Run(ctx context.Context, db postgres.Querier) error {
-	// TODO: implementar
-	return nil
-}
-`
-
-func NewCmd() *cobra.Command {
-	return scaffold.NewCmd("gera o boilerplate de um novo seeder Postgres (database/sql)", seederTemplate)
+// NewScaffolder returns the core.Scaffolder that generates native Postgres (database/sql) seeders.
+// Pass it to core.NewService via core.WithScaffolder to enable `seed new`.
+func NewScaffolder() core.Scaffolder {
+	return scaffold.New(seederTemplate)
 }

@@ -1,135 +1,119 @@
 package scaffold_test
 
 import (
-	"bytes"
-	"go/parser"
-	"go/token"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
+	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/internal/scaffold"
 )
 
-const fakeTemplate = `package {{.Package}}
-
+// Deliberately sloppy spacing: the Writer must gofmt whatever it renders.
+var fakeTemplate = template.Must(template.New("fake").Parse(`package {{.Package}}
 type {{.TypeName}} struct{}
+func ({{.TypeName}}) ID() string {   return {{printf "%q" .ID}} }
+func ({{.TypeName}}) Dependencies() []string { return {{if .Deps}}[]string{ {{- range $i, $d := .Deps}}{{if $i}}, {{end}}{{printf "%q" $d}}{{end -}} }{{else}}nil{{end}} }
+`))
 
-func ({{.TypeName}}) ID() string             { return "{{.ID}}" }
-func ({{.TypeName}}) Dependencies() []string { return {{.Deps}} }
-`
-
-func runNewCmd(t *testing.T, args ...string) (string, error) {
-	t.Helper()
-	cmd := scaffold.NewCmd("test", fakeTemplate)
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	cmd.SetArgs(args)
-	err := cmd.Execute()
-	return out.String(), err
+func spec(dir string) core.SeederSpec {
+	return core.SeederSpec{
+		ID:        "2026-11-02-create-orders",
+		Slug:      "create-orders",
+		CreatedAt: time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC),
+		Dir:       dir,
+	}
 }
 
-func mustParseGo(t *testing.T, path string) {
+func scaffoldOK(t *testing.T, w *scaffold.Writer, s core.SeederSpec) (string, string) {
 	t.Helper()
+	path, err := w.Scaffold(context.Background(), s)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	src, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ler arquivo gerado: %v", err)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), path, src, parser.AllErrors); err != nil {
-		t.Fatalf("arquivo gerado não é Go válido: %v\n---\n%s", err, src)
-	}
+	return path, string(src)
 }
 
-func TestNewCmd_GeneratesValidFile(t *testing.T) {
+func TestScaffold_WritesGofmtedFileNamedByDateAndSlug(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "seeders")
+	path, src := scaffoldOK(t, scaffold.New(fakeTemplate), spec(dir))
 
-	out, err := runNewCmd(t, "create-orders", "--dir", dir)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if want := filepath.Join(dir, "20261102_create-orders.go"); path != want {
+		t.Fatalf("esperava %q, got %q", want, path)
 	}
+	want := `package seeders
 
-	path := strings.TrimSpace(out)
-	if _, statErr := os.Stat(path); statErr != nil {
-		t.Fatalf("esperava arquivo em %q: %v", path, statErr)
-	}
-	mustParseGo(t, path)
+type CreateOrders struct{}
 
-	content, _ := os.ReadFile(path)
-	if !strings.Contains(string(content), "package seeders") {
-		t.Fatalf("esperava package derivado do diretório 'seeders', got:\n%s", content)
-	}
-	if !strings.Contains(string(content), "type CreateOrders struct{}") {
-		t.Fatalf("esperava type CreateOrders, got:\n%s", content)
-	}
-	wantID := time.Now().Format("2006-01-02") + "-create-orders"
-	if !strings.Contains(string(content), `"`+wantID+`"`) {
-		t.Fatalf("esperava ID %q, got:\n%s", wantID, content)
-	}
-	if !strings.Contains(string(content), "Dependencies() []string { return nil }") {
-		t.Fatalf("esperava Dependencies() nil sem --deps, got:\n%s", content)
+func (CreateOrders) ID() string             { return "2026-11-02-create-orders" }
+func (CreateOrders) Dependencies() []string { return nil }
+`
+	if src != want {
+		t.Fatalf("conteúdo inesperado:\n--- want\n%s--- got\n%s", want, src)
 	}
 }
 
-func TestNewCmd_WithDeps(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "seeders")
+func TestScaffold_RendersDeps(t *testing.T) {
+	s := spec(filepath.Join(t.TempDir(), "seeders"))
+	s.Deps = []string{"2026-01-01-create-admin", "2026-01-02-create-products"}
+	_, src := scaffoldOK(t, scaffold.New(fakeTemplate), s)
 
-	out, err := runNewCmd(t, "create-orders", "--dir", dir, "--deps", "2026-01-01-create-admin,2026-01-02-create-products")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	path := strings.TrimSpace(out)
-	mustParseGo(t, path)
-
-	content, _ := os.ReadFile(path)
-	want := `Dependencies() []string { return []string{"2026-01-01-create-admin", "2026-01-02-create-products"} }`
-	if !strings.Contains(string(content), want) {
-		t.Fatalf("esperava %q, got:\n%s", want, content)
+	// Long enough that gofmt moves the body off the signature line.
+	want := `return []string{"2026-01-01-create-admin", "2026-01-02-create-products"}`
+	if !strings.Contains(src, want) {
+		t.Fatalf("esperava %q, got:\n%s", want, src)
 	}
 }
 
-func TestNewCmd_ExplicitPackageOverridesDirName(t *testing.T) {
-	dir := t.TempDir() // basename is a random temp name, not a valid package hint
+func TestScaffold_ExplicitPackageOverridesDirName(t *testing.T) {
+	s := spec(t.TempDir()) // basename is a random temp name, not a valid package hint
+	s.Package = "myseeders"
+	_, src := scaffoldOK(t, scaffold.New(fakeTemplate), s)
 
-	out, err := runNewCmd(t, "create-orders", "--dir", dir, "--package", "myseeders")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	path := strings.TrimSpace(out)
-	mustParseGo(t, path)
-
-	content, _ := os.ReadFile(path)
-	if !strings.Contains(string(content), "package myseeders") {
-		t.Fatalf("esperava package myseeders, got:\n%s", content)
+	if !strings.HasPrefix(src, "package myseeders\n") {
+		t.Fatalf("esperava package myseeders, got:\n%s", src)
 	}
 }
 
-func TestNewCmd_RejectsInvalidSlug(t *testing.T) {
-	dir := t.TempDir()
-	for _, slug := range []string{"CreateOrders", "create orders", "create_orders"} {
-		if _, err := runNewCmd(t, slug, "--dir", dir); err == nil {
-			t.Fatalf("esperava erro para slug inválido %q", slug)
-		}
-	}
-}
-
-func TestNewCmd_RejectsUnusablePackageName(t *testing.T) {
-	dir := t.TempDir() // basename is not guaranteed to be a valid Go identifier
-
-	if _, err := runNewCmd(t, "create-orders", "--dir", dir); err == nil {
+func TestScaffold_RejectsUnusablePackageName(t *testing.T) {
+	s := spec(filepath.Join(t.TempDir(), "my-seeders"))
+	if _, err := scaffold.New(fakeTemplate).Scaffold(context.Background(), s); err == nil {
 		t.Fatal("esperava erro quando o nome do diretório não é um identificador Go válido")
 	}
 }
 
-func TestNewCmd_DoesNotOverwriteExistingFile(t *testing.T) {
+func TestScaffold_DoesNotOverwriteExistingFile(t *testing.T) {
+	s := spec(filepath.Join(t.TempDir(), "seeders"))
+	w := scaffold.New(fakeTemplate)
+	path, _ := scaffoldOK(t, w, s)
+	if err := os.WriteFile(path, []byte("// editado pelo usuário\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := w.Scaffold(context.Background(), s); err == nil {
+		t.Fatal("esperava erro ao gerar o mesmo seeder duas vezes no mesmo dia")
+	}
+	if got, _ := os.ReadFile(path); string(got) != "// editado pelo usuário\n" {
+		t.Fatalf("arquivo existente foi alterado: %q", got)
+	}
+}
+
+func TestScaffold_InvalidRenderedGoLeavesNoFile(t *testing.T) {
+	broken := template.Must(template.New("broken").Parse("package {{.Package}}\nfunc (\n"))
 	dir := filepath.Join(t.TempDir(), "seeders")
 
-	if _, err := runNewCmd(t, "create-orders", "--dir", dir); err != nil {
-		t.Fatalf("unexpected error on first run: %v", err)
+	if _, err := scaffold.New(broken).Scaffold(context.Background(), spec(dir)); err == nil {
+		t.Fatal("esperava erro para template que gera Go inválido")
 	}
-	if _, err := runNewCmd(t, "create-orders", "--dir", dir); err == nil {
-		t.Fatal("esperava erro ao gerar o mesmo seeder duas vezes no mesmo dia")
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("não deveria ter deixado arquivo para trás, got %v", entries)
 	}
 }

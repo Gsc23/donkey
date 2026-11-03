@@ -48,7 +48,7 @@ func TestIntegration_RunDryRun_DoesNotWriteHistory(t *testing.T) {
 	toSeed := []core.Identifiable{seeders.CreateAdmin{}}
 	runner := core.New(adapter, history, core.NoTransaction)
 
-	cmd := cli.New(runner, toSeed)
+	cmd := cli.New(core.NewService(runner, toSeed))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 	cmd.SetArgs([]string{"run", "--dry-run"})
@@ -76,7 +76,7 @@ func TestIntegration_Run_WritesHistory(t *testing.T) {
 	toSeed := []core.Identifiable{seeders.CreateAdmin{}}
 	runner := core.New(adapter, history, core.NoTransaction)
 
-	cmd := cli.New(runner, toSeed)
+	cmd := cli.New(core.NewService(runner, toSeed))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 	cmd.SetArgs([]string{"run"})
