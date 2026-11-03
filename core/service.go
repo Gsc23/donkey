@@ -118,7 +118,7 @@ func (s *Service) New(ctx context.Context, req NewSeederRequest) (string, error)
 		return "", ErrScaffolderNotConfigured
 	}
 	if !slugPattern.MatchString(req.Slug) {
-		return "", fmt.Errorf("nome inválido %q: use letras minúsculas, números e hífen, começando por letra (ex.: create-orders)", req.Slug)
+		return "", fmt.Errorf("invalid name %q: use lowercase letters, digits and hyphens, starting with a letter (e.g. create-orders)", req.Slug)
 	}
 
 	now := s.now()
@@ -129,7 +129,7 @@ func (s *Service) New(ctx context.Context, req NewSeederRequest) (string, error)
 		known[seeder.ID()] = true
 	}
 	if known[id] {
-		return "", fmt.Errorf("já existe um seeder registrado com ID %q", id)
+		return "", fmt.Errorf("a seeder with ID %q is already registered", id)
 	}
 	var unknown []string
 	for _, dep := range req.Deps {
@@ -138,7 +138,7 @@ func (s *Service) New(ctx context.Context, req NewSeederRequest) (string, error)
 		}
 	}
 	if len(unknown) > 0 {
-		return "", fmt.Errorf("--deps referencia seeder(s) não registrado(s): %s", strings.Join(unknown, ", "))
+		return "", fmt.Errorf("--deps references unregistered seeder(s): %s", strings.Join(unknown, ", "))
 	}
 
 	return s.scaffolder.Scaffold(ctx, SeederSpec{

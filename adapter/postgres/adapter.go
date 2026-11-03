@@ -19,7 +19,7 @@ func NewAdapter(db *sql.DB) *Adapter {
 func (a *Adapter) Execute(ctx context.Context, s core.Identifiable) error {
 	ps, ok := s.(Seeder)
 	if !ok {
-		return fmt.Errorf("seeder %q não implementa postgres.Seeder", s.ID())
+		return fmt.Errorf("seeder %q does not implement postgres.Seeder", s.ID())
 	}
 	return ps.Run(ctx, a.db)
 }
@@ -36,7 +36,7 @@ func (a *Adapter) Transaction(ctx context.Context, fn func(context.Context, core
 	}
 	if err := fn(ctx, scope); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("%w (rollback também falhou: %v)", err, rbErr)
+			return fmt.Errorf("%w (rollback also failed: %v)", err, rbErr)
 		}
 		return err
 	}
@@ -50,7 +50,7 @@ type txAdapter struct {
 func (a *txAdapter) Execute(ctx context.Context, s core.Identifiable) error {
 	ps, ok := s.(Seeder)
 	if !ok {
-		return fmt.Errorf("seeder %q não implementa postgres.Seeder", s.ID())
+		return fmt.Errorf("seeder %q does not implement postgres.Seeder", s.ID())
 	}
 	return ps.Run(ctx, a.tx)
 }

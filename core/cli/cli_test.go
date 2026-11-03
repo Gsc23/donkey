@@ -67,14 +67,45 @@ func TestPlanCmd_PrintsNumbered(t *testing.T) {
 	}
 }
 
-func TestPlanCmd_CycleError_PrintsPathAndReturnsError(t *testing.T) {
+func TestPlanCmd_CycleError_ReturnsErrorWithoutExtraOutput(t *testing.T) {
 	cycle := &core.CycleError{Path: []string{"a", "b", "a"}}
 	out, err := runCommand(t, &fakeSeeds{err: cycle}, "plan")
 	if !errors.Is(err, cycle) {
 		t.Fatalf("esperava CycleError, got %v", err)
 	}
-	if want := "circular dependency: [a b a]\n"; out != want {
-		t.Fatalf("esperava %q, got %q", want, out)
+	if out != "" {
+		t.Fatalf("esperava stdout vazio, got %q", out)
+	}
+}
+
+func TestRunCmd_NothingPending_SaysSo(t *testing.T) {
+	for _, args := range [][]string{{"run"}, {"run", "--dry-run"}} {
+		out, err := runCommand(t, &fakeSeeds{}, args...)
+		if err != nil {
+			t.Fatalf("%v: unexpected error: %v", args, err)
+		}
+		if want := "nothing pending — all seeders already applied\n"; out != want {
+			t.Fatalf("%v: esperava %q, got %q", args, want, out)
+		}
+	}
+}
+
+func TestRunCmd_ErrorWithNothingPending_DoesNotClaimSuccess(t *testing.T) {
+	cycle := &core.CycleError{Path: []string{"a", "b", "a"}}
+	out, err := runCommand(t, &fakeSeeds{err: cycle}, "run")
+	if !errors.Is(err, cycle) {
+		t.Fatalf("esperava CycleError, got %v", err)
+	}
+	if out != "" {
+		t.Fatalf("esperava stdout vazio, got %q", out)
+	}
+}
+
+func TestRootHelp_EveryCommandHasShortDescription(t *testing.T) {
+	for _, c := range cli.New(&fakeSeeds{}).Commands() {
+		if c.Short == "" {
+			t.Errorf("comando %q sem Short — aparece em branco no --help", c.Name())
+		}
 	}
 }
 
@@ -113,7 +144,7 @@ func TestRunCmd_DryRun_PrintsPendingWithoutSeededLines(t *testing.T) {
 	if !svc.gotOpts.DryRun {
 		t.Fatal("--dry-run deveria chegar como RunOptions.DryRun")
 	}
-	if want := "[dry-run] executaria: b\n"; out != want {
+	if want := "[dry-run] would run: b\n"; out != want {
 		t.Fatalf("esperava %q, got %q", want, out)
 	}
 }

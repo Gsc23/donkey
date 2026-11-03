@@ -20,7 +20,7 @@ func New(db *gorm.DB) *GORMAdapter {
 func (a *GORMAdapter) Execute(ctx context.Context, s core.Identifiable) error {
 	gs, ok := s.(Seeder)
 	if !ok {
-		return fmt.Errorf("seeder %q não implementa gormadapter.Seeder", s.ID())
+		return fmt.Errorf("seeder %q does not implement gormadapter.Seeder", s.ID())
 	}
 	return gs.Run(ctx, a.db.WithContext(ctx))
 }

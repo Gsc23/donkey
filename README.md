@@ -239,7 +239,7 @@ func (CreateProducts) ID() string             { return "2026-09-26-create-produc
 func (CreateProducts) Dependencies() []string { return []string{"2026-09-26-create-admin"} }
 
 func (CreateProducts) Run(ctx context.Context, db *gorm.DB) error {
-    // TODO: implementar
+    // TODO: implement
     return nil
 }
 ```

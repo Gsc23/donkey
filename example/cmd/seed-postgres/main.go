@@ -26,12 +26,12 @@ func main() {
 
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatalf("abrir conexão: %v", err)
+		log.Fatalf("open connection: %v", err)
 	}
 
 	history := postgres.NewHistoryStore(db)
 	if err := history.EnsureSchema(context.Background()); err != nil {
-		log.Fatalf("preparar seeder_history: %v", err)
+		log.Fatalf("prepare seeder_history: %v", err)
 	}
 
 	runner := core.New(postgres.NewAdapter(db), history, core.PerSeeder)

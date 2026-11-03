@@ -13,6 +13,6 @@ func ({{.TypeName}}) ID() string { return {{printf "%q" .ID}} }
 func ({{.TypeName}}) Dependencies() []string { return {{if .Deps}}[]string{ {{- range $i, $d := .Deps}}{{if $i}}, {{end}}{{printf "%q" $d}}{{end -}} }{{else}}nil{{end}} }
 
 func ({{.TypeName}}) Run(ctx context.Context, db postgres.Querier) error {
-	// TODO: implementar
+	// TODO: implement
 	return nil
 }

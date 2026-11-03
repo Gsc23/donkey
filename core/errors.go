@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var ErrTransactionNotSupported = errors.New("adapter não suporta execução transacional")
+var ErrTransactionNotSupported = errors.New("adapter does not support transactional execution")
 
 type ExitCoder interface {
 	ExitCode() int
@@ -19,7 +19,7 @@ type PartialRunError struct {
 }
 
 func (e *PartialRunError) Error() string {
-	return fmt.Sprintf("falhou em %q após %d seeder(s) aplicados: %v", e.FailedID, e.Completed, e.Err)
+	return fmt.Sprintf("failed at %q after %d seeder(s) applied: %v", e.FailedID, e.Completed, e.Err)
 }
 
 func (e *PartialRunError) Unwrap() error { return e.Err }
@@ -31,7 +31,7 @@ type CycleError struct {
 }
 
 func (e *CycleError) Error() string {
-	return fmt.Sprintf("dependência circular detectada: %s", strings.Join(e.Path, " -> "))
+	return fmt.Sprintf("circular dependency detected: %s", strings.Join(e.Path, " -> "))
 }
 
 func (e *CycleError) ExitCode() int { return 3 }

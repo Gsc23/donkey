@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -36,7 +35,8 @@ func New(svc Seeds, extra ...*cobra.Command) *cobra.Command {
 
 func listCmd(svc Seeds) *cobra.Command {
 	return &cobra.Command{
-		Use: "list",
+		Use:   "list",
+		Short: "List seeders in execution order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids, err := svc.Order(cmd.Context())
 			if err != nil {
@@ -52,14 +52,11 @@ func listCmd(svc Seeds) *cobra.Command {
 
 func planCmd(svc Seeds) *cobra.Command {
 	return &cobra.Command{
-		Use: "plan",
+		Use:   "plan",
+		Short: "Show the numbered execution plan (resolves dependencies, detects cycles)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ids, err := svc.Order(cmd.Context())
 			if err != nil {
-				var cycleErr *core.CycleError
-				if errors.As(err, &cycleErr) {
-					fmt.Fprintln(cmd.OutOrStdout(), "circular dependency:", cycleErr.Path)
-				}
 				return err
 			}
 			for i, id := range ids {
@@ -73,13 +70,18 @@ func planCmd(svc Seeds) *cobra.Command {
 func runCmd(svc Seeds) *cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
-		Use: "run",
+		Use:   "run",
+		Short: "Run pending seeders, skipping the ones already applied",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report, err := svc.Run(cmd.Context(), core.RunOptions{DryRun: dryRun})
 			out := cmd.OutOrStdout()
+			if err == nil && len(report.Pending) == 0 {
+				fmt.Fprintln(out, "nothing pending — all seeders already applied")
+				return nil
+			}
 			if dryRun {
 				for _, id := range report.Pending {
-					fmt.Fprintf(out, "[dry-run] executaria: %s\n", id)
+					fmt.Fprintf(out, "[dry-run] would run: %s\n", id)
 				}
 				return err
 			}
@@ -89,13 +91,14 @@ func runCmd(svc Seeds) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "não executa de fato, só mostra o que rodaria")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would run without executing anything")
 	return cmd
 }
 
 func statusCmd(svc Seeds) *cobra.Command {
 	return &cobra.Command{
-		Use: "status",
+		Use:   "status",
+		Short: "Show which seeders are applied (✓) and which are pending (✗)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			steps, err := svc.Status(cmd.Context())
 			if err != nil {
@@ -116,8 +119,8 @@ func statusCmd(svc Seeds) *cobra.Command {
 func newCmd(svc Seeds) *cobra.Command {
 	var req core.NewSeederRequest
 	cmd := &cobra.Command{
-		Use:   "new <nome>",
-		Short: "gera o arquivo de um novo seeder (template do adapter configurado)",
+		Use:   "new <name>",
+		Short: "Generate a new seeder file from the configured adapter's template",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Slug = args[0]
@@ -129,8 +132,8 @@ func newCmd(svc Seeds) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&req.Dir, "dir", "./seeders", "diretório onde o arquivo do seeder será criado")
-	cmd.Flags().StringVar(&req.Package, "package", "", "nome do pacote Go do arquivo gerado (default: nome do diretório de --dir)")
-	cmd.Flags().StringSliceVar(&req.Deps, "deps", nil, "IDs dos seeders (já registrados) dos quais este depende")
+	cmd.Flags().StringVar(&req.Dir, "dir", "./seeders", "directory where the seeder file is created")
+	cmd.Flags().StringVar(&req.Package, "package", "", "Go package of the generated file (default: basename of --dir)")
+	cmd.Flags().StringSliceVar(&req.Deps, "deps", nil, "IDs of already-registered seeders this one depends on")
 	return cmd
 }

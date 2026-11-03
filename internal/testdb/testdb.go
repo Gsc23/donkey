@@ -30,12 +30,12 @@ func Run(m *testing.M) int {
 		tcpostgres.BasicWaitStrategies(),
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "testdb: subir container %s: %v (Docker está rodando? ou defina DATABASE_URL)\n", image, err)
+		fmt.Fprintf(os.Stderr, "testdb: start container %s: %v (is Docker running? or set DATABASE_URL)\n", image, err)
 		return 1
 	}
 	defer func() {
 		if err := testcontainers.TerminateContainer(c); err != nil {
-			fmt.Fprintf(os.Stderr, "testdb: derrubar container: %v\n", err)
+			fmt.Fprintf(os.Stderr, "testdb: terminate container: %v\n", err)
 		}
 	}()
 
@@ -49,7 +49,7 @@ func Run(m *testing.M) int {
 
 func DSN() string {
 	if dsn == "" {
-		panic("testdb.DSN chamado sem testdb.Run — adicione `func TestMain(m *testing.M) { os.Exit(testdb.Run(m)) }` ao pacote")
+		panic("testdb.DSN called without testdb.Run — add `func TestMain(m *testing.M) { os.Exit(testdb.Run(m)) }` to the package")
 	}
 	return dsn
 }
