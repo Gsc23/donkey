@@ -55,8 +55,6 @@ func planCmd(svc Seeds) *cobra.Command {
 		Use:   "plan",
 		Short: "Show the numbered execution plan (resolves dependencies, detects cycles)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// A CycleError already carries the path in its message; cobra
-			// prints it once on stderr.
 			ids, err := svc.Order(cmd.Context())
 			if err != nil {
 				return err

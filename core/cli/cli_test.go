@@ -73,8 +73,6 @@ func TestPlanCmd_CycleError_ReturnsErrorWithoutExtraOutput(t *testing.T) {
 	if !errors.Is(err, cycle) {
 		t.Fatalf("esperava CycleError, got %v", err)
 	}
-	// the path is already in the error message; printing it on stdout too
-	// showed it twice.
 	if out != "" {
 		t.Fatalf("esperava stdout vazio, got %q", out)
 	}
