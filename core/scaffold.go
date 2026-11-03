@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var ErrScaffolderNotConfigured = errors.New("nenhum Scaffolder configurado — passe core.WithScaffolder(...) para core.NewService")
+var ErrScaffolderNotConfigured = errors.New("no Scaffolder configured — pass core.WithScaffolder(...) to core.NewService")
 
 // NewSeederRequest is what a frontend asks for when creating a seeder.
 type NewSeederRequest struct {

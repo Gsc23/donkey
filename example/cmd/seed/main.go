@@ -23,12 +23,12 @@ func main() {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("conectar ao banco: %v", err)
+		log.Fatalf("connect to database: %v", err)
 	}
 
 	history := gormadapter.NewHistoryStore(db)
 	if err := history.EnsureSchema(context.Background()); err != nil {
-		log.Fatalf("preparar seeder_history: %v", err)
+		log.Fatalf("prepare seeder_history: %v", err)
 	}
 
 	runner := core.New(gormadapter.New(db), history, core.PerSeeder)

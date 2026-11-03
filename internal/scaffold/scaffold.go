@@ -44,7 +44,7 @@ func (w *Writer) Scaffold(_ context.Context, spec core.SeederSpec) (string, erro
 		pkg = filepath.Base(filepath.Clean(spec.Dir))
 	}
 	if !identPattern.MatchString(pkg) {
-		return "", fmt.Errorf("nome de pacote inválido %q (derivado de --dir=%q) — passe --package explicitamente", pkg, spec.Dir)
+		return "", fmt.Errorf("invalid package name %q (derived from --dir=%q) — pass --package explicitly", pkg, spec.Dir)
 	}
 
 	// Render and gofmt fully in memory first: a template bug must never
@@ -56,28 +56,28 @@ func (w *Writer) Scaffold(_ context.Context, spec core.SeederSpec) (string, erro
 		ID:       spec.ID,
 		Deps:     spec.Deps,
 	}); err != nil {
-		return "", fmt.Errorf("renderizar template: %w", err)
+		return "", fmt.Errorf("render template: %w", err)
 	}
 	src, err := format.Source(buf.Bytes())
 	if err != nil {
-		return "", fmt.Errorf("template gerou Go inválido: %w\n---\n%s", err, buf.Bytes())
+		return "", fmt.Errorf("template produced invalid Go: %w\n---\n%s", err, buf.Bytes())
 	}
 
 	if err := os.MkdirAll(spec.Dir, 0o755); err != nil {
-		return "", fmt.Errorf("criar diretório %q: %w", spec.Dir, err)
+		return "", fmt.Errorf("create directory %q: %w", spec.Dir, err)
 	}
 	path := filepath.Join(spec.Dir, fmt.Sprintf("%s_%s.go", spec.CreatedAt.Format("20060102"), spec.Slug))
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 	if err != nil {
 		if os.IsExist(err) {
-			return "", fmt.Errorf("%q já existe — apague-o ou escolha outro nome", path)
+			return "", fmt.Errorf("%q already exists — delete it or pick another name", path)
 		}
-		return "", fmt.Errorf("criar %q: %w", path, err)
+		return "", fmt.Errorf("create %q: %w", path, err)
 	}
 	if _, err := f.Write(src); err != nil {
 		f.Close()
 		os.Remove(path)
-		return "", fmt.Errorf("escrever %q: %w", path, err)
+		return "", fmt.Errorf("write %q: %w", path, err)
 	}
 	return path, f.Close()
 }

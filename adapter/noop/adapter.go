@@ -13,7 +13,7 @@ type Adapter struct {
 
 func New() *Adapter {
 	return &Adapter{
-		Log: func(id string) { fmt.Printf("[dry-run] executaria: %s\n", id) },
+		Log: func(id string) { fmt.Printf("[dry-run] would run: %s\n", id) },
 	}
 }
 

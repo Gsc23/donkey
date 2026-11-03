@@ -30,7 +30,7 @@ func buildGraph(seeders []Identifiable) (*graph, error) {
 	for id, deps := range g.edges {
 		for _, dep := range deps {
 			if _, ok := g.nodes[dep]; !ok {
-				return nil, fmt.Errorf("seeder %q depende de seeder inexistente %q", id, dep)
+				return nil, fmt.Errorf("seeder %q depends on unknown seeder %q", id, dep)
 			}
 		}
 	}
