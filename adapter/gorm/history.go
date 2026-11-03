@@ -6,6 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// schemaLockSQL serializes concurrent EnsureSchema calls, see the native
+// adapter/postgres HistoryStore for why; both use the same key.
+const schemaLockSQL = `SELECT pg_advisory_xact_lock(hashtext('donkey.seeder_history'))`
+
 const createTableSQL = `
 CREATE TABLE IF NOT EXISTS public.seeder_history (
     seeder_id   VARCHAR(255) PRIMARY KEY,
@@ -19,7 +23,12 @@ func NewHistoryStore(db *gorm.DB) *HistoryStore {
 }
 
 func (h *HistoryStore) EnsureSchema(ctx context.Context) error {
-	return h.db.WithContext(ctx).Exec(createTableSQL).Error
+	return h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(schemaLockSQL).Error; err != nil {
+			return err
+		}
+		return tx.Exec(createTableSQL).Error
+	})
 }
 
 func (h *HistoryStore) HasRun(ctx context.Context, id string) (bool, error) {

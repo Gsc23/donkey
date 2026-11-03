@@ -12,11 +12,11 @@ import (
 	gormadapter "github.com/Gsc23/donkey/adapter/gorm"
 	"github.com/Gsc23/donkey/core"
 	"github.com/Gsc23/donkey/example/seeders"
+	"github.com/Gsc23/donkey/internal/testdb"
 )
 
 func TestIntegration_RunAndSkipOnSecondRun(t *testing.T) {
-	dsn := "host=localhost user=seeder password=seeder dbname=seeder_dev port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(testdb.DSN()), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("conectar: %v", err)
 	}

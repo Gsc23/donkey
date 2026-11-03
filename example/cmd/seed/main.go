@@ -37,7 +37,8 @@ func main() {
 		seeders.CreateAdmin{},
 	}
 
-	cmd := cli.New(runner, toSeed, gormadapter.NewCmd())
+	svc := core.NewService(runner, toSeed, core.WithScaffolder(gormadapter.NewScaffolder()))
+	cmd := cli.New(svc)
 	if err := cmd.Execute(); err != nil {
 		var ec core.ExitCoder
 		if errors.As(err, &ec) {

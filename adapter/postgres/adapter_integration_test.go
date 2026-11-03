@@ -12,9 +12,8 @@ import (
 
 	pgadapter "github.com/Gsc23/donkey/adapter/postgres"
 	"github.com/Gsc23/donkey/core"
+	"github.com/Gsc23/donkey/internal/testdb"
 )
-
-const testDSN = "host=localhost user=seeder password=seeder dbname=seeder_dev port=5432 sslmode=disable"
 
 const notesTable = "adapter_postgres_test_notes"
 
@@ -37,7 +36,7 @@ func (s noteSeeder) Run(ctx context.Context, db pgadapter.Querier) error {
 
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("pgx", testDSN)
+	db, err := sql.Open("pgx", testdb.DSN())
 	if err != nil {
 		t.Fatalf("abrir conexão: %v", err)
 	}

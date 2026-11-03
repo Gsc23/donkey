@@ -1,0 +1,18 @@
+{{- /* Rendered by internal/scaffold, then gofmt'd. Data: scaffold.Data. */ -}}
+package {{.Package}}
+
+import (
+	"context"
+
+	"github.com/Gsc23/donkey/adapter/postgres"
+)
+
+type {{.TypeName}} struct{}
+
+func ({{.TypeName}}) ID() string { return {{printf "%q" .ID}} }
+func ({{.TypeName}}) Dependencies() []string { return {{if .Deps}}[]string{ {{- range $i, $d := .Deps}}{{if $i}}, {{end}}{{printf "%q" $d}}{{end -}} }{{else}}nil{{end}} }
+
+func ({{.TypeName}}) Run(ctx context.Context, db postgres.Querier) error {
+	// TODO: implementar
+	return nil
+}

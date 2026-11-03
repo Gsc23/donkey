@@ -40,7 +40,8 @@ func main() {
 		pgseeders.CreateAdmin{},
 	}
 
-	cmd := cli.New(runner, toSeed, postgres.NewCmd())
+	svc := core.NewService(runner, toSeed, core.WithScaffolder(postgres.NewScaffolder()))
+	cmd := cli.New(svc)
 	if err := cmd.Execute(); err != nil {
 		var ec core.ExitCoder
 		if errors.As(err, &ec) {
